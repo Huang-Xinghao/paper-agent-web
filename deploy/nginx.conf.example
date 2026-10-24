@@ -1,0 +1,26 @@
+# Serve behind the organization's existing authentication/access layer.
+server {
+    listen 127.0.0.1:8080;
+    server_name localhost;
+    root /home/xinghaohuang/paper-agent-web/dist;
+    index index.html;
+    client_max_body_size 3m;
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host 127.0.0.1;
+        proxy_set_header Origin http://127.0.0.1;
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 3600s;
+    }
+    location /assets/ {
+        expires 7d;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

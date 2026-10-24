@@ -1,0 +1,17 @@
+# User service: ~/.config/systemd/user/paper-agent-api.service
+[Unit]
+Description=Paper Agent Workbench API
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/xinghaohuang/paper-agent
+ExecStart=/home/xinghaohuang/paper-agent/run-web-api
+Restart=on-failure
+RestartSec=3
+# Preserve detached research workers when restarting the API.
+KillMode=process
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target
