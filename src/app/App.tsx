@@ -66,7 +66,9 @@ export function App() {
           <ArrowUpOutlined rotate={45} />
         </div>
       </aside>
-      <main className="main-shell">
+      <main
+        className={`main-shell ${location.pathname.startsWith('/projects/') ? 'workbench-shell' : ''}`}
+      >
         <header className="topbar">
           <span>
             WORKSPACE <span className="topbar-separator">/</span>{' '}

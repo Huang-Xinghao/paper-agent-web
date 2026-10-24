@@ -4,6 +4,7 @@ import {
   Alert,
   App,
   Button,
+  Drawer,
   Empty,
   Input,
   List,
@@ -73,6 +74,8 @@ export function Workbench({ nodes }: { nodes: NodeInfo[] }) {
   const [selectedNode, setSelectedNode] = useState('');
   const [selectedFile, setSelectedFile] = useState('');
   const [runOpen, setRunOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
   const [answer, setAnswer] = useState('');
   const [tab, setTab] = useState('report');
   const [streamState, setStreamState] = useState('connecting');
@@ -115,6 +118,7 @@ export function Workbench({ nodes }: { nodes: NodeInfo[] }) {
     onSuccess: () => {
       setRunOpen(false);
       setAnswer('');
+      setReviewOpen(false);
       client.invalidateQueries({ queryKey: ['project', id] });
       client.invalidateQueries({ queryKey: ['projects'] });
       message.success('运行请求已提交');
@@ -189,6 +193,9 @@ export function Workbench({ nodes }: { nodes: NodeInfo[] }) {
           </Tooltip>
         </div>
         <Space>
+          <Button onClick={() => setActivityOpen(true)} icon={<ClockCircleOutlined />}>
+            运行动态
+          </Button>
           <Tooltip title="刷新">
             <Button
               aria-label="刷新"
@@ -228,46 +235,40 @@ export function Workbench({ nodes }: { nodes: NodeInfo[] }) {
               type="primary"
               icon={<PlayCircleOutlined />}
               size="large"
-              disabled={!!checkpoint}
-              onClick={() => setRunOpen(true)}
+              onClick={() => (checkpoint ? setReviewOpen(true) : setRunOpen(true))}
             >
-              {p.state.task_prompt ? '继续研究' : '启动研究'}
+              {checkpoint ? '审阅并继续' : p.state.task_prompt ? '继续研究' : '启动研究'}
             </Button>
           )}
         </Space>
       </div>
-      <Alert
-        className="run-alert"
-        type={checkpoint ? 'warning' : 'info'}
-        showIcon
-        message={
-          checkpoint
-            ? '专家问答 · 当前阶段等待你的回答'
-            : p.state.mode === 'expert'
-              ? '专家模式已启用 · 阶段完成后会暂停并显示问题'
-              : '启用专家模式，逐阶段回答问题并审阅产物'
-        }
-        description={
-          checkpoint
-            ? checkpoint.summary
-            : '在“启动研究 / 继续研究 → 协作方式”中选择专家模式。已有运行需先结束或停止，再从节点继续。'
-        }
-        action={
-          checkpoint ? (
-            <Button
-              onClick={() =>
-                document.getElementById('expert-review')?.scrollIntoView({ behavior: 'smooth' })
-              }
-            >
-              查看问题并回答
-            </Button>
-          ) : (
-            <Button disabled={running} onClick={() => setRunOpen(true)}>
-              协作方式设置
-            </Button>
-          )
-        }
-      />
+      <div className={`collaboration-bar ${checkpoint ? 'needs-review' : ''}`}>
+        <span className="collaboration-indicator">{checkpoint ? '✦' : '◉'}</span>
+        <div>
+          <strong>
+            {checkpoint
+              ? '专家问答 · 等待你的判断'
+              : p.state.mode === 'expert'
+                ? '专家模式已启用'
+                : '研究协作'}
+          </strong>
+          <span>
+            {checkpoint
+              ? `${checkpoint.questions?.length || 0} 个问题待回答，审阅后继续研究`
+              : p.state.mode === 'expert'
+                ? '每个阶段完成后，审阅产物并回答问题'
+                : '开启专家模式，逐阶段参与研究决策'}
+          </span>
+        </div>
+        <Button
+          size="small"
+          type={checkpoint ? 'primary' : 'text'}
+          disabled={!checkpoint && running}
+          onClick={() => (checkpoint ? setReviewOpen(true) : setRunOpen(true))}
+        >
+          {checkpoint ? '查看问题并回答' : '协作方式设置'}
+        </Button>
+      </div>
       {(p.runs[0]?.error || p.state.error) && !running && (
         <Alert
           className="run-alert"
@@ -338,7 +339,13 @@ export function Workbench({ nodes }: { nodes: NodeInfo[] }) {
           <div className="workspace-panel-header">
             <div>
               <span className="eyebrow">RESEARCH ARTIFACTS</span>
-              <h2>{phase?.label || '研究产物'}</h2>
+              <h2>
+                {/\.tex$/i.test(file)
+                  ? '论文编辑器'
+                  : selectedFile && file !== defaultFile
+                    ? '文件工作区'
+                    : phase?.label || '研究产物'}
+              </h2>
             </div>
             <Tag bordered={false}>
               {p.state.mode === 'expert'
@@ -355,18 +362,19 @@ export function Workbench({ nodes }: { nodes: NodeInfo[] }) {
             items={[
               {
                 key: 'report',
-                label: '阶段产物',
+                label: '文件预览',
                 children: (
                   <>
                     <div className="file-selector">
-                      {fileList.some((f) => f.path === 'paper/main.tex') && (
-                        <Button
-                          style={{ marginBottom: 12 }}
-                          onClick={() => selectFile('paper/main.tex')}
-                        >
-                          打开论文编辑器
-                        </Button>
-                      )}
+                      {file !== 'paper/main.tex' &&
+                        fileList.some((f) => f.path === 'paper/main.tex') && (
+                          <Button
+                            className="paper-editor-shortcut"
+                            onClick={() => selectFile('paper/main.tex')}
+                          >
+                            打开论文编辑器
+                          </Button>
+                        )}
                       <Select
                         showSearch
                         allowClear
@@ -492,6 +500,14 @@ export function Workbench({ nodes }: { nodes: NodeInfo[] }) {
             ]}
           />
         </section>
+      </div>
+      <Drawer
+        title="运行动态"
+        open={activityOpen}
+        onClose={() => setActivityOpen(false)}
+        width={460}
+        className="workbench-drawer"
+      >
         <aside className="activity-panel">
           <div className="panel-caption">
             运行动态
@@ -545,62 +561,70 @@ export function Workbench({ nodes }: { nodes: NodeInfo[] }) {
             <CheckCircleFilled /> 运行状态持续保存至本机
           </div>
         </aside>
-      </div>
+      </Drawer>
       {checkpoint && (
-        <section className="review-panel" id="expert-review">
-          <div className="review-heading">
-            <span className="review-icon">✦</span>
-            <div>
-              <span className="eyebrow">HUMAN IN THE LOOP</span>
-              <h2>这一阶段，听听你的判断</h2>
+        <Drawer
+          title="专家审阅"
+          open={reviewOpen}
+          onClose={() => setReviewOpen(false)}
+          width={560}
+          className="workbench-drawer"
+        >
+          <section className="review-panel" id="expert-review">
+            <div className="review-heading">
+              <span className="review-icon">✦</span>
+              <div>
+                <span className="eyebrow">HUMAN IN THE LOOP</span>
+                <h2>这一阶段，听听你的判断</h2>
+              </div>
+              <Tag color="gold" bordered={false}>
+                等待审阅
+              </Tag>
             </div>
-            <Tag color="gold" bordered={false}>
-              等待审阅
-            </Tag>
-          </div>
-          <p className="review-summary">{checkpoint.summary}</p>
-          <ol className="review-questions">
-            {checkpoint.questions?.map((q, i) => (
-              <li key={i}>{q}</li>
-            ))}
-          </ol>
-          <div className="review-input-row">
-            <Input.TextArea
-              value={answer}
-              onChange={(e) => setAnswer(e.target.value)}
-              autoSize={{ minRows: 3, maxRows: 8 }}
-              maxLength={20000}
-              placeholder="输入你的回答或修改意见；留空表示接受当前产物并继续。"
-            />
-            <Button
-              type="primary"
-              size="large"
-              loading={run.isPending}
-              disabled={running}
-              icon={<ArrowRightOutlined />}
-              onClick={() => {
-                if (dirtyRef.current) {
-                  message.warning('请先保存报告修改，再提交审阅');
-                  return;
-                }
-                modal.confirm({
-                  title: answer.trim() ? '提交意见并继续研究？' : '确认当前产物并继续？',
-                  content: answer.trim()
-                    ? '系统将按意见修订当前节点产物，再进入后续节点。'
-                    : '系统将校验当前产物并进入后续节点，可能调用模型或启动实验。',
-                  onOk: () =>
-                    run.mutateAsync({
-                      action: 'review',
-                      answer,
-                      checkpoint_token: p.checkpoint_token,
-                    }),
-                });
-              }}
-            >
-              {answer.trim() ? '提交意见并继续' : '确认并继续'}
-            </Button>
-          </div>
-        </section>
+            <p className="review-summary">{checkpoint.summary}</p>
+            <ol className="review-questions">
+              {checkpoint.questions?.map((q, i) => (
+                <li key={i}>{q}</li>
+              ))}
+            </ol>
+            <div className="review-input-row">
+              <Input.TextArea
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                autoSize={{ minRows: 3, maxRows: 8 }}
+                maxLength={20000}
+                placeholder="输入你的回答或修改意见；留空表示接受当前产物并继续。"
+              />
+              <Button
+                type="primary"
+                size="large"
+                loading={run.isPending}
+                disabled={running}
+                icon={<ArrowRightOutlined />}
+                onClick={() => {
+                  if (dirtyRef.current) {
+                    message.warning('请先保存报告修改，再提交审阅');
+                    return;
+                  }
+                  modal.confirm({
+                    title: answer.trim() ? '提交意见并继续研究？' : '确认当前产物并继续？',
+                    content: answer.trim()
+                      ? '系统将按意见修订当前节点产物，再进入后续节点。'
+                      : '系统将校验当前产物并进入后续节点，可能调用模型或启动实验。',
+                    onOk: () =>
+                      run.mutateAsync({
+                        action: 'review',
+                        answer,
+                        checkpoint_token: p.checkpoint_token,
+                      }),
+                  });
+                }}
+              >
+                {answer.trim() ? '提交意见并继续' : '确认并继续'}
+              </Button>
+            </div>
+          </section>
+        </Drawer>
       )}
       <RunDialog
         open={runOpen}

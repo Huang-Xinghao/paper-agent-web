@@ -1,0 +1,558 @@
+/* A bounded workbench: navigation and controls stay outside content scroll areas. */
+.workbench-shell {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.workbench-shell > .topbar {
+  height: 52px;
+  flex-shrink: 0;
+}
+.workbench-shell > .connection-alert {
+  flex-shrink: 0;
+}
+.workbench-page {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 20px 24px 18px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  gap: 14px;
+}
+.workbench-heading {
+  flex-shrink: 0;
+  margin: 0;
+  gap: 12px;
+}
+.workbench-heading > div:first-child {
+  min-width: 0;
+}
+.back-link {
+  font-size: 11px;
+  margin-bottom: 7px;
+}
+.workbench-heading h1 {
+  font-size: 22px;
+  line-height: 1.35;
+  margin: 0 0 5px;
+}
+.project-path {
+  font-size: 11px;
+  max-width: min(45vw, 650px);
+}
+.collaboration-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid #e0e6dd;
+  border-radius: 10px;
+  background: #f9fbf7;
+}
+.collaboration-indicator {
+  color: #537c65;
+  font-size: 18px;
+}
+.collaboration-bar > div {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 12px;
+}
+.collaboration-bar strong {
+  font-weight: 600;
+}
+.collaboration-bar > div > span {
+  color: #788777;
+}
+.collaboration-bar.needs-review {
+  background: #fffaf0;
+  border-color: #ecdfbf;
+}
+.collaboration-bar.needs-review .collaboration-indicator {
+  color: #ad853e;
+}
+.workbench-page > .run-alert {
+  flex-shrink: 0;
+  margin: 0;
+  max-height: 90px;
+  overflow: auto;
+}
+.workbench-grid {
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: 184px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+  gap: 14px;
+}
+.phase-panel,
+.workspace-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-color: #e1e7df;
+  border-radius: 12px;
+}
+.phase-panel .panel-caption {
+  padding: 17px 16px;
+  flex-shrink: 0;
+}
+.phase-progress {
+  flex-shrink: 0;
+}
+.phase-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 5px 0;
+}
+.phase-item {
+  font-size: 12px;
+  padding: 10px;
+  min-height: 52px;
+}
+.phase-item small {
+  font-size: 10px;
+  margin-top: 3px;
+}
+.phase-item.selected {
+  background: #eaf3ed;
+  color: #28654b;
+}
+.phase-footer {
+  flex-shrink: 0;
+  margin: 0;
+  font-size: 10px;
+}
+.workspace-panel-header {
+  padding: 16px 20px 4px;
+  flex-shrink: 0;
+}
+.workspace-panel-header .eyebrow {
+  display: none;
+}
+.workspace-panel-header h2 {
+  font-size: 17px;
+  margin: 0;
+  font-weight: 600;
+}
+.workspace-panel-header .ant-tag {
+  font-size: 11px;
+}
+.workspace-tabs,
+.workspace-tabs > .ant-tabs-content-holder,
+.workspace-tabs > .ant-tabs-content-holder > .ant-tabs-content,
+.workspace-tabs .ant-tabs-tabpane-active {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+.workspace-tabs > .ant-tabs-nav {
+  flex-shrink: 0;
+  padding: 0 20px;
+}
+.workspace-tabs > .ant-tabs-nav .ant-tabs-tab {
+  padding: 12px 0;
+  font-size: 12px;
+}
+.file-selector {
+  display: flex;
+  align-items: center;
+  flex-direction: row-reverse;
+  gap: 12px;
+  padding: 10px 16px;
+  flex-shrink: 0;
+  background: #fbfcfa;
+}
+.file-selector .ant-select {
+  min-width: 0;
+  flex: 1;
+  font-size: 12px;
+}
+.paper-editor-shortcut {
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.artifact-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+.artifact-toolbar {
+  padding: 9px 16px;
+  flex-shrink: 0;
+  background: #fff;
+}
+.artifact-filename {
+  font-size: 11px;
+  color: #748071;
+}
+.artifact-toolbar > .ant-space {
+  flex-shrink: 0;
+}
+.artifact-toolbar .ant-segmented,
+.artifact-toolbar .ant-btn {
+  font-size: 11px;
+}
+.artifact-panel > .ant-alert {
+  flex-shrink: 0;
+}
+.artifact-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.artifact-content > .markdown {
+  padding: 28px clamp(22px, 5vw, 80px) 56px;
+  min-height: 0;
+  max-width: 1050px;
+  margin: 0 auto;
+  font-size: 14px;
+  line-height: 1.9;
+  color: #3f4d44;
+}
+.artifact-content > .source-preview {
+  max-height: none;
+  min-height: 100%;
+  font-size: 13px;
+}
+.artifact-content > .pdf-preview {
+  display: block;
+  height: 100%;
+}
+.artifact-content > .editor-host {
+  height: 100%;
+}
+.editor-host {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+.artifact-empty {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  padding: 45px 20px;
+}
+.artifact-expanded {
+  overflow: hidden;
+  border-radius: 12px;
+}
+.artifact-content.is-latex {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  scrollbar-gutter: auto;
+}
+.is-latex > .ant-alert {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 0;
+  border-width: 0 0 1px;
+}
+.is-latex .ant-alert-message {
+  font-size: 12px;
+  margin: 0;
+}
+.is-latex .ant-alert-description {
+  font-size: 11px;
+  color: #7b887f;
+}
+.latex-workspace {
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  overflow: hidden;
+}
+.latex-source,
+.latex-pdf {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border-width: 0;
+}
+.latex-source {
+  border-right-width: 1px;
+}
+.pane-heading {
+  min-height: 48px;
+  flex-shrink: 0;
+  padding: 8px 12px;
+  font-size: 11px;
+  background: #f8faf7;
+  border-bottom: 1px solid #e8ece6;
+}
+.latex-source .source-preview {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  max-height: none;
+  font-size: 12px;
+  overscroll-behavior: contain;
+}
+.latex-workspace .pdf-preview {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  display: block;
+}
+.latex-mobile-switch {
+  display: none;
+}
+.workspace-tabs .ant-tabs-tabpane-active:not([id$='-report']) {
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.files-tab > .ant-input-search {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fff;
+}
+.workbench-drawer .ant-drawer-body {
+  padding: 20px;
+  overscroll-behavior: contain;
+}
+.workbench-drawer .activity-panel {
+  display: flex;
+  border: 0;
+  border-radius: 0;
+  min-height: 0;
+  max-height: none;
+  height: 100%;
+}
+.workbench-drawer .activity-current h3 {
+  font-size: 16px;
+}
+.workbench-drawer .activity-current p,
+.workbench-drawer .live-log {
+  font-size: 12px;
+}
+.workbench-drawer .live-log {
+  max-height: none;
+  min-height: 0;
+}
+.workbench-drawer .review-panel {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+.workbench-drawer .review-input-row {
+  flex-direction: column;
+  align-items: stretch;
+}
+.workbench-drawer .review-questions {
+  font-size: 14px;
+  line-height: 1.9;
+}
+body:has(.workbench-shell) .logout-button {
+  top: 10px;
+  bottom: auto;
+  right: 72px;
+}
+.workbench-shell .topbar .local-chip {
+  display: none;
+}
+@media (max-width: 1100px) {
+  .workbench-page {
+    padding: 16px;
+  }
+  .workbench-grid {
+    grid-template-columns: 155px minmax(0, 1fr);
+  }
+  .collaboration-bar > div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+@media (max-width: 700px) {
+  .workbench-shell > .topbar {
+    height: 48px;
+    padding: 0 16px;
+  }
+  .workbench-page {
+    padding: 12px 10px 10px;
+    gap: 10px;
+  }
+  .workbench-heading {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .workbench-heading h1 {
+    font-size: 18px;
+    gap: 7px;
+  }
+  .workbench-heading > .ant-space {
+    margin-left: 0;
+  }
+  .workbench-heading .ant-btn {
+    height: 30px;
+    font-size: 11px;
+    padding-inline: 10px;
+  }
+  .project-path {
+    display: none;
+  }
+  .back-link {
+    font-size: 10px;
+    margin-bottom: 4px;
+  }
+  .collaboration-bar {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  .collaboration-bar > div {
+    font-size: 11px;
+  }
+  .collaboration-bar > div > span {
+    display: none;
+  }
+  .collaboration-bar .ant-btn {
+    font-size: 11px;
+    padding-inline: 8px;
+  }
+  .workbench-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .phase-panel {
+    flex-shrink: 0;
+    width: 100%;
+    border-radius: 8px;
+  }
+  .phase-panel .panel-caption,
+  .phase-progress,
+  .phase-footer {
+    display: none;
+  }
+  .phase-list {
+    display: flex;
+    flex: none;
+    padding: 5px;
+    overflow-x: auto;
+  }
+  .phase-item {
+    min-width: 105px;
+    width: auto;
+    min-height: 36px;
+    margin: 0;
+    padding: 6px;
+    gap: 6px;
+    font-size: 11px;
+  }
+  .phase-item small {
+    display: none;
+  }
+  .phase-number {
+    width: 21px;
+    height: 21px;
+  }
+  .workspace-panel {
+    flex: 1;
+    width: 100%;
+  }
+  .workspace-panel-header {
+    padding: 12px 12px 0;
+  }
+  .workspace-panel-header h2 {
+    font-size: 15px;
+  }
+  .workspace-tabs > .ant-tabs-nav {
+    padding: 0 12px;
+  }
+  .workspace-tabs > .ant-tabs-nav .ant-tabs-tab {
+    padding: 10px 0;
+    font-size: 11px;
+  }
+  .workspace-tabs > .ant-tabs-nav .ant-tabs-tab + .ant-tabs-tab {
+    margin-left: 16px;
+  }
+  .file-selector {
+    padding: 8px 10px;
+  }
+  .paper-editor-shortcut {
+    display: none;
+  }
+  .artifact-toolbar {
+    padding: 7px 10px;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .artifact-filename {
+    width: 100%;
+    font-size: 10px;
+  }
+  .artifact-content > .markdown {
+    padding: 18px 16px 36px;
+    font-size: 13px;
+  }
+  .latex-mobile-switch {
+    display: block;
+    margin: 6px 10px;
+    flex-shrink: 0;
+  }
+  .latex-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .latex-workspace.show-source .latex-pdf,
+  .latex-workspace.show-pdf .latex-source {
+    display: none;
+  }
+  .is-latex .ant-alert-description {
+    display: none;
+  }
+  .artifact-expanded {
+    inset: 0;
+    border-radius: 0;
+  }
+  body:has(.workbench-shell) .logout-button {
+    top: 8px;
+    right: 60px;
+  }
+}
+@media (max-width: 700px) {
+  /* Native tab scrolling avoids moving a tab beneath the pointer on focus. */
+  .workspace-tabs > .ant-tabs-nav {
+    overflow-x: auto;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+  .workspace-tabs > .ant-tabs-nav .ant-tabs-nav-wrap {
+    overflow: visible;
+    flex: none;
+  }
+  .workspace-tabs > .ant-tabs-nav .ant-tabs-nav-list {
+    transform: none !important;
+    transition: none;
+  }
+  .workspace-tabs > .ant-tabs-nav .ant-tabs-nav-operations,
+  .workspace-tabs > .ant-tabs-nav .ant-tabs-nav-wrap::before,
+  .workspace-tabs > .ant-tabs-nav .ant-tabs-nav-wrap::after {
+    display: none;
+  }
+}

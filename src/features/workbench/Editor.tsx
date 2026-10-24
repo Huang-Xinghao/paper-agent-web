@@ -36,7 +36,7 @@ export default function FileEditor({
     )[extension || ''] || 'plaintext';
   return (
     <Editor
-      height="60vh"
+      height="100%"
       language={language}
       value={value}
       onChange={(v) => onChange(v || '')}

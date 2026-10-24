@@ -18,7 +18,9 @@ test('lists real projects, searches, and opens a research report', async ({ page
   await page.getByPlaceholder('搜索项目或研究目标').fill('电池');
   await page.locator('a.project-card').click();
   await expect(page.getByRole('heading', { name: '电池寿命研究' })).toBeVisible();
+  await page.getByRole('button', { name: '查看问题并回答' }).click();
   await expect(page.getByText('优先研究哪一个泛化问题？')).toBeVisible();
+  await page.getByRole('button', { name: '关闭', exact: true }).click();
   await page.screenshot({ path: 'artifacts/workbench-tested.png', fullPage: true });
   expect(errors).toEqual([]);
 });
@@ -55,6 +57,7 @@ test('edits and saves a report through the API', async ({ page }) => {
 
 test('expert review submits explicit feedback with a version token', async ({ page }) => {
   await openFixture(page);
+  await page.getByRole('button', { name: '查看问题并回答' }).click();
   let body: Record<string, unknown> | undefined;
   await page.route('**/api/projects/*/runs', async (route) => {
     body = route.request().postDataJSON();
@@ -171,3 +174,64 @@ test('LaTeX source and PDF appear together and images open in a gallery', async 
   await page.locator('.figure-gallery .ant-image').first().click();
   await expect(page.locator('.ant-image-preview')).toBeVisible();
 });
+
+for (const viewport of [
+  { width: 1512, height: 900 },
+  { width: 390, height: 844 },
+]) {
+  test(`file contents scroll without moving controls at ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.route('**/api/projects/*/file?*', async (route) => {
+      const response = await route.fetch();
+      const data = await response.json();
+      const path = new URL(route.request().url()).searchParams.get('path');
+      await route.fulfill({
+        response,
+        json: {
+          ...data,
+          content: path?.endsWith('.tex')
+            ? '\\documentclass{article}\n' + '% Long source line\n'.repeat(250)
+            : '# 电池寿命研究\n\n' + '研究证据与实验结果。\n\n'.repeat(250),
+        },
+      });
+    });
+    await openFixture(page);
+    const content = page.locator('.artifact-content');
+    const toolbar = page.locator('.artifact-toolbar');
+    const top = (await toolbar.boundingBox())!.y;
+    await expect.poll(() => content.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+    await content.hover();
+    await page.mouse.wheel(0, 650);
+    await expect.poll(() => content.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    expect((await toolbar.boundingBox())!.y).toBe(top);
+    expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(
+      true,
+    );
+    await page.getByRole('button', { name: '全屏查看' }).click();
+    await expect(page.locator('.artifact-expanded')).toBeVisible();
+    await page.getByRole('button', { name: '退出全屏' }).click();
+    await page.getByRole('tab', { name: /项目文件/ }).click();
+    await page.getByRole('button', { name: 'paper/main.tex', exact: true }).click();
+    const source = page.locator('.latex-source .source-preview');
+    await expect.poll(() => source.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+    const sourceTop = (await toolbar.boundingBox())!.y;
+    await source.hover();
+    await page.mouse.wheel(0, 650);
+    await expect.poll(() => source.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    expect((await toolbar.boundingBox())!.y).toBe(sourceTop);
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+    if (viewport.width < 700) {
+      await page.locator('.latex-mobile-switch').getByText('PDF 预览', { exact: true }).click();
+      await expect(page.locator('.latex-pdf iframe')).toBeVisible();
+      await expect(source).toBeHidden();
+    }
+    await page.getByRole('button', { name: /运行动态/ }).click();
+    await expect(page.getByRole('dialog', { name: '运行动态' })).toBeVisible();
+    await page.getByRole('button', { name: '关闭', exact: true }).click();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+      true,
+    );
+    await page.screenshot({ path: `artifacts/bounded-workbench-${viewport.width}.png` });
+  });
+}

@@ -9,6 +9,7 @@ import { AuthGate } from './features/auth/AuthGate';
 import 'antd/dist/reset.css';
 import 'katex/dist/katex.min.css';
 import './app/styles.css';
+import './features/workbench/workbench.css';
 const router = createBrowserRouter([{ path: '*', element: <App /> }]);
 const queryClient = new QueryClient({
   defaultOptions: {

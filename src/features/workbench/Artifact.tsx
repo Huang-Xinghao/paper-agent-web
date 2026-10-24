@@ -33,6 +33,7 @@ export function Artifact({
   const [mode, setMode] = useState('预览');
   const [expanded, setExpanded] = useState(false);
   const [pdfPath, setPdfPath] = useState('');
+  const [latexPane, setLatexPane] = useState('source');
   const [savedSource, setSavedSource] = useState(false);
   const isTex = /\.tex$/i.test(path);
   const pdfs = files.filter((file) => /\.pdf$/i.test(file.path));
@@ -112,9 +113,9 @@ export function Artifact({
   return (
     <div className={`artifact-panel ${expanded ? 'artifact-expanded' : ''}`}>
       <div className="artifact-toolbar">
-        <span className="artifact-filename">
+        <span className="artifact-filename" title={path}>
           <FileTextOutlined />
-          {path}
+          {path.split('/').pop()}
         </span>
         <Space wrap>
           <Button size="small" onClick={() => setExpanded(!expanded)}>
@@ -162,105 +163,132 @@ export function Artifact({
       {dirty && (
         <Alert type="warning" banner message="有未保存的修改，请在切换文件或页面前保存。" />
       )}
-      {file.isPending ? (
-        <div className="artifact-padding">
-          <Skeleton active paragraph={{ rows: 10 }} />
-        </div>
-      ) : file.isError ? (
-        <Alert
-          type="error"
-          showIcon
-          message="文件加载失败"
-          description={(file.error as Error).message}
-          action={<Button onClick={() => file.refetch()}>重试</Button>}
-        />
-      ) : isTex ? (
-        <>
+      <div
+        className={`artifact-content ${isTex ? 'is-latex' : ''}`}
+        tabIndex={0}
+        role="region"
+        aria-label="文件内容"
+      >
+        {file.isPending ? (
+          <div className="artifact-padding">
+            <Skeleton active paragraph={{ rows: 10 }} />
+          </div>
+        ) : file.isError ? (
           <Alert
-            type="info"
+            type="error"
             showIcon
-            message="LaTeX 论文工作区"
-            description="左侧编辑源码，右侧对照已有 PDF。保存只更新源码；重新生成 PDF 请在继续研究中选择“编译交付”节点。"
+            message="文件加载失败"
+            description={(file.error as Error).message}
+            action={<Button onClick={() => file.refetch()}>重试</Button>}
           />
-          {(dirty || stalePdf) && (
+        ) : isTex ? (
+          <>
             <Alert
-              type="warning"
-              banner
-              message="源码已修改，右侧 PDF 可能尚未更新，需重新编译后核对。"
+              type="info"
+              showIcon
+              message="LaTeX 论文工作区"
+              description="保存后，在“继续研究 → 编译交付”更新 PDF。"
             />
-          )}
-          <div className="latex-workspace">
-            <section className="latex-source">
-              <div className="pane-heading">LaTeX 源码 · {mode === '编辑' ? '编辑中' : '只读'}</div>
-              {mode === '编辑' ? (
-                <Suspense fallback={<Spin className="editor-loading" />}>
-                  <Editor value={draft} path={path} onChange={setDraft} />
-                </Suspense>
-              ) : (
-                <pre className="source-preview">{file.data?.content || ''}</pre>
-              )}
-            </section>
-            <section className="latex-pdf">
-              <div className="pane-heading">
-                PDF 预览{' '}
-                <Select
-                  aria-label="选择论文 PDF"
-                  placeholder="选择已有 PDF"
-                  value={selectedPdf || undefined}
-                  onChange={setPdfPath}
-                  options={pdfs.map((file) => ({ value: file.path, label: file.path }))}
-                />
-              </div>
-              {selectedPdf ? (
-                <iframe
-                  className="pdf-preview"
-                  title="论文 PDF 对照预览"
-                  src={`${api.download(projectId, selectedPdf)}&v=${pdf?.modified || 0}`}
-                />
-              ) : (
-                <Empty description="尚无已编译 PDF，完成编译交付后可在这里对照查看" />
-              )}
-            </section>
-          </div>
-        </>
-      ) : mode === '编辑' ? (
-        <Suspense fallback={<Spin className="editor-loading" />}>
-          <Editor value={draft} path={path} onChange={setDraft} />
-        </Suspense>
-      ) : file.data?.kind === 'binary' ? (
-        path.endsWith('.pdf') ? (
-          <iframe className="pdf-preview" title={path} src={api.download(projectId, path)} />
-        ) : /\.(png|jpe?g|webp)$/i.test(path) ? (
-          <div className="image-preview">
-            <Image alt={path} src={api.download(projectId, path)} />
-            <p className="muted">点击图片可放大、缩小、旋转和查看原图</p>
-          </div>
-        ) : (
-          <Empty description="此文件可下载后查看" />
-        )
-      ) : path.endsWith('.md') ? (
-        <article className="markdown">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm, remarkMath]}
-            rehypePlugins={[rehypeKatex]}
-            components={{
-              a: (props) => <a {...props} target="_blank" rel="noopener noreferrer" />,
-              img: ({ alt, src }) => {
-                const image = resolveImage(path, src, files);
-                return image ? (
-                  <Image alt={alt || image} src={api.download(projectId, image)} />
+            {(dirty || stalePdf) && (
+              <Alert
+                type="warning"
+                banner
+                message="源码已修改，右侧 PDF 可能尚未更新，需重新编译后核对。"
+              />
+            )}
+            <Segmented
+              className="latex-mobile-switch"
+              aria-label="论文面板"
+              value={latexPane}
+              onChange={setLatexPane}
+              options={[
+                { label: 'LaTeX 源码', value: 'source' },
+                { label: 'PDF 预览', value: 'pdf' },
+              ]}
+            />
+            <div className={`latex-workspace show-${latexPane}`}>
+              <section className="latex-source">
+                <div className="pane-heading">
+                  LaTeX 源码 · {mode === '编辑' ? '编辑中' : '只读'}
+                </div>
+                {mode === '编辑' ? (
+                  <Suspense fallback={<Spin className="editor-loading" />}>
+                    <div className="editor-host">
+                      <Editor value={draft} path={path} onChange={setDraft} />
+                    </div>
+                  </Suspense>
                 ) : (
-                  <span className="muted">[图片：{alt || '请在图片画廊中查看'}]</span>
-                );
-              },
-            }}
-          >
+                  <pre className="source-preview" tabIndex={0}>
+                    {file.data?.content || ''}
+                  </pre>
+                )}
+              </section>
+              <section className="latex-pdf">
+                <div className="pane-heading">
+                  PDF 预览{' '}
+                  <Select
+                    aria-label="选择论文 PDF"
+                    placeholder="选择已有 PDF"
+                    value={selectedPdf || undefined}
+                    onChange={setPdfPath}
+                    options={pdfs.map((file) => ({ value: file.path, label: file.path }))}
+                  />
+                </div>
+                {selectedPdf ? (
+                  <iframe
+                    className="pdf-preview"
+                    title="论文 PDF 对照预览"
+                    src={`${api.download(projectId, selectedPdf)}&v=${pdf?.modified || 0}`}
+                  />
+                ) : (
+                  <Empty description="尚无已编译 PDF，完成编译交付后可在这里对照查看" />
+                )}
+              </section>
+            </div>
+          </>
+        ) : mode === '编辑' ? (
+          <Suspense fallback={<Spin className="editor-loading" />}>
+            <div className="editor-host">
+              <Editor value={draft} path={path} onChange={setDraft} />
+            </div>
+          </Suspense>
+        ) : file.data?.kind === 'binary' ? (
+          path.endsWith('.pdf') ? (
+            <iframe className="pdf-preview" title={path} src={api.download(projectId, path)} />
+          ) : /\.(png|jpe?g|webp)$/i.test(path) ? (
+            <div className="image-preview">
+              <Image alt={path} src={api.download(projectId, path)} />
+              <p className="muted">点击图片可放大、缩小、旋转和查看原图</p>
+            </div>
+          ) : (
+            <Empty description="此文件可下载后查看" />
+          )
+        ) : path.endsWith('.md') ? (
+          <article className="markdown">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm, remarkMath]}
+              rehypePlugins={[rehypeKatex]}
+              components={{
+                a: (props) => <a {...props} target="_blank" rel="noopener noreferrer" />,
+                img: ({ alt, src }) => {
+                  const image = resolveImage(path, src, files);
+                  return image ? (
+                    <Image alt={alt || image} src={api.download(projectId, image)} />
+                  ) : (
+                    <span className="muted">[图片：{alt || '请在图片画廊中查看'}]</span>
+                  );
+                },
+              }}
+            >
+              {file.data?.content || ''}
+            </ReactMarkdown>
+          </article>
+        ) : (
+          <pre className="source-preview" tabIndex={0}>
             {file.data?.content || ''}
-          </ReactMarkdown>
-        </article>
-      ) : (
-        <pre className="source-preview">{file.data?.content || ''}</pre>
-      )}
+          </pre>
+        )}
+      </div>
     </div>
   );
 }
