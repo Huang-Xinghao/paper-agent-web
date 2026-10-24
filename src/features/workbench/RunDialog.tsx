@@ -39,7 +39,12 @@ export function RunDialog({
       <Form
         form={form}
         layout="vertical"
-        initialValues={{ prompt: '', mode: 'expert', max_tool_rounds: 30, timeout: 600 }}
+        initialValues={{
+          prompt: '',
+          mode: project.state.mode || 'expert',
+          max_tool_rounds: 30,
+          timeout: 600,
+        }}
         onFinish={(values) =>
           onRun({
             ...values,
@@ -62,16 +67,19 @@ export function RunDialog({
             showCount
           />
         </Form.Item>
-        {!existing && (
-          <Form.Item name="mode" label="协作方式">
-            <Select
-              options={[
-                { value: 'expert', label: '专家模式 · 每个阶段审阅后继续（推荐）' },
-                { value: 'auto', label: '自动模式 · 连续运行整个工作流' },
-              ]}
-            />
-          </Form.Item>
-        )}
+        <Form.Item name="mode" label="协作方式">
+          <Select
+            options={[
+              { value: 'expert', label: '专家模式 · 每个阶段审阅后继续（推荐）' },
+              { value: 'auto', label: '自动模式 · 连续运行整个工作流' },
+            ]}
+          />
+        </Form.Item>
+        <Alert
+          type="info"
+          showIcon
+          message="专家模式会在阶段产物生成后暂停，并在工作台显示审阅问题。提交回答或确认后继续；运行过程中不会立即出现问答。"
+        />
         <Space align="start" style={{ width: '100%' }} className="run-node-fields">
           <Form.Item name="start_node" label="起始节点">
             <Select

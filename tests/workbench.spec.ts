@@ -129,3 +129,45 @@ test('login gates project data and logout returns to login', async ({ page }) =>
   await expect(page.getByText('登录你的研究空间')).toBeVisible();
   await expect(page.locator('a.project-card')).toHaveCount(0);
 });
+
+test('expert questions have a visible entry and collaboration mode can be chosen', async ({
+  page,
+}) => {
+  await openFixture(page);
+  await page.getByRole('button', { name: '查看问题并回答' }).click();
+  await expect(
+    page.getByPlaceholder('输入你的回答或修改意见；留空表示接受当前产物并继续。'),
+  ).toBeInViewport();
+  await page.goto('/');
+  await page.getByRole('button', { name: '新建研究项目' }).click();
+  await page.getByLabel('项目名称').fill('模式选择测试');
+  await page.getByRole('button', { name: '创建项目', exact: true }).click();
+  await page.getByRole('button', { name: '协作方式设置' }).click();
+  await expect(page.getByLabel('协作方式')).toBeVisible();
+  await expect(page.getByText('专家模式 · 每个阶段审阅后继续（推荐）')).toBeVisible();
+});
+
+test('LaTeX source and PDF appear together and images open in a gallery', async ({ page }) => {
+  await openFixture(page);
+  await page.getByRole('tab', { name: /项目文件/ }).click();
+  await page.getByRole('button', { name: /paper\/main\.tex/ }).click();
+  await expect(page.getByText('LaTeX 论文工作区', { exact: true })).toBeVisible();
+  await expect(page.locator('iframe[title="论文 PDF 对照预览"]')).toBeVisible();
+  await page.getByText('编辑', { exact: true }).click();
+  const editor = page.locator('.monaco-editor').first();
+  await expect(editor).toBeVisible();
+  await editor.click();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.insertText('\n% Browser edit');
+  await page.getByRole('button', { name: /保\s*存/ }).click();
+  await expect(page.getByText('文件已保存')).toBeVisible();
+  await expect(
+    page.getByText('源码已修改，右侧 PDF 可能尚未更新，需重新编译后核对。'),
+  ).toBeVisible();
+  await page.screenshot({ path: 'artifacts/latex-workspace.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  await page.getByRole('tab', { name: '图片画廊' }).click();
+  await page.locator('.figure-gallery .ant-image').first().click();
+  await expect(page.locator('.ant-image-preview')).toBeVisible();
+});

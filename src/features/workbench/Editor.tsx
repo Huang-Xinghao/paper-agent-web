@@ -3,6 +3,17 @@ import * as monaco from 'monaco-editor/esm/vs/editor/editor.api.js';
 import 'monaco-editor/esm/vs/basic-languages/python/python.contribution.js';
 import 'monaco-editor/esm/vs/basic-languages/markdown/markdown.contribution.js';
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
+monaco.languages.register({ id: 'latex' });
+monaco.languages.setMonarchTokensProvider('latex', {
+  tokenizer: {
+    root: [
+      [/%.*$/, 'comment'],
+      [/\\[a-zA-Z@]+|\\./, 'keyword'],
+      [/[{}[\]]/, 'delimiter.bracket'],
+      [/\$\$?|[&_^]/, 'operator'],
+    ],
+  },
+});
 // Bundle the editor locally so research file contents never depend on a CDN.
 self.MonacoEnvironment = { getWorker: () => new EditorWorker() };
 loader.config({ monaco });
@@ -18,7 +29,7 @@ export default function FileEditor({
   const extension = path.split('.').pop();
   const language =
     (
-      { md: 'markdown', py: 'python', tex: 'plaintext', bib: 'plaintext', json: 'json' } as Record<
+      { md: 'markdown', py: 'python', tex: 'latex', bib: 'latex', json: 'json' } as Record<
         string,
         string
       >

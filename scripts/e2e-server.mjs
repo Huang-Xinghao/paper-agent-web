@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -30,6 +31,21 @@ await writeFile(
       next_node: 'data_search',
     },
   }),
+);
+
+await mkdir(join(project, 'paper'), { recursive: true });
+await mkdir(join(project, 'figures'), { recursive: true });
+await writeFile(
+  join(project, 'paper', 'main.tex'),
+  '\\documentclass{article}\n\\begin{document}\nResearch paper\n\\end{document}\n',
+);
+await writeFile(join(project, 'paper', 'main.pdf'), '%PDF-1.4\n%%EOF\n');
+await writeFile(
+  join(project, 'figures', 'test.png'),
+  Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQ0AAAAASUVORK5CYII=',
+    'base64',
+  ),
 );
 const python =
   process.env.PAPER_AGENT_RUNTIME_PYTHON || '/data/apps/micromamba/envs/xinghao/bin/python';

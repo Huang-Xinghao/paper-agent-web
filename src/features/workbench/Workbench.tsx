@@ -36,6 +36,7 @@ import type { NodeInfo, RunInput } from '../../api/client';
 import { Status } from '../../components/Status';
 import { formatDate } from '../../lib/date';
 import { Artifact } from './Artifact';
+import { FigureGallery } from './FigureGallery';
 import { RunDialog } from './RunDialog';
 const reports: Record<string, string> = {
   literature: 'literature/RESEARCH_REPORT.md',
@@ -235,6 +236,38 @@ export function Workbench({ nodes }: { nodes: NodeInfo[] }) {
           )}
         </Space>
       </div>
+      <Alert
+        className="run-alert"
+        type={checkpoint ? 'warning' : 'info'}
+        showIcon
+        message={
+          checkpoint
+            ? '专家问答 · 当前阶段等待你的回答'
+            : p.state.mode === 'expert'
+              ? '专家模式已启用 · 阶段完成后会暂停并显示问题'
+              : '启用专家模式，逐阶段回答问题并审阅产物'
+        }
+        description={
+          checkpoint
+            ? checkpoint.summary
+            : '在“启动研究 / 继续研究 → 协作方式”中选择专家模式。已有运行需先结束或停止，再从节点继续。'
+        }
+        action={
+          checkpoint ? (
+            <Button
+              onClick={() =>
+                document.getElementById('expert-review')?.scrollIntoView({ behavior: 'smooth' })
+              }
+            >
+              查看问题并回答
+            </Button>
+          ) : (
+            <Button disabled={running} onClick={() => setRunOpen(true)}>
+              协作方式设置
+            </Button>
+          )
+        }
+      />
       {(p.runs[0]?.error || p.state.error) && !running && (
         <Alert
           className="run-alert"
@@ -326,6 +359,14 @@ export function Workbench({ nodes }: { nodes: NodeInfo[] }) {
                 children: (
                   <>
                     <div className="file-selector">
+                      {fileList.some((f) => f.path === 'paper/main.tex') && (
+                        <Button
+                          style={{ marginBottom: 12 }}
+                          onClick={() => selectFile('paper/main.tex')}
+                        >
+                          打开论文编辑器
+                        </Button>
+                      )}
                       <Select
                         showSearch
                         allowClear
@@ -343,12 +384,18 @@ export function Workbench({ nodes }: { nodes: NodeInfo[] }) {
                       projectId={id}
                       path={file}
                       running={running}
+                      files={fileList}
                       onDirtyChange={(v) => {
                         dirtyRef.current = v;
                       }}
                     />
                   </>
                 ),
+              },
+              {
+                key: 'figures',
+                label: '图片画廊',
+                children: <FigureGallery projectId={id} files={fileList} />,
               },
               {
                 key: 'files',
@@ -382,6 +429,7 @@ export function Workbench({ nodes }: { nodes: NodeInfo[] }) {
                         >
                           <button
                             className="file-row-button"
+                            aria-label={f.path}
                             onClick={() => {
                               selectFile(f.path);
                               setTab('report');
@@ -499,7 +547,7 @@ export function Workbench({ nodes }: { nodes: NodeInfo[] }) {
         </aside>
       </div>
       {checkpoint && (
-        <section className="review-panel">
+        <section className="review-panel" id="expert-review">
           <div className="review-heading">
             <span className="review-icon">✦</span>
             <div>

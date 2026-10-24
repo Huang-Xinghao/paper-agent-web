@@ -1,23 +1,25 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useBlocker } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, App, Button, Empty, Segmented, Skeleton, Space, Spin } from 'antd';
+import { Alert, App, Button, Empty, Image, Segmented, Select, Skeleton, Space, Spin } from 'antd';
 import { DownloadOutlined, EditOutlined, FileTextOutlined, SaveOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
-import { api } from '../../api/client';
+import { api, type ProjectFile } from '../../api/client';
 const Editor = lazy(() => import('./Editor'));
 export function Artifact({
   projectId,
   path,
   running,
   onDirtyChange,
+  files,
 }: {
   projectId: string;
   path: string;
   running: boolean;
+  files: ProjectFile[];
   onDirtyChange: (dirty: boolean) => void;
 }) {
   const { message, modal } = App.useApp();
@@ -29,10 +31,26 @@ export function Artifact({
     refetchInterval: running ? 6000 : false,
   });
   const [mode, setMode] = useState('预览');
+  const [expanded, setExpanded] = useState(false);
+  const [pdfPath, setPdfPath] = useState('');
+  const [savedSource, setSavedSource] = useState(false);
+  const isTex = /\.tex$/i.test(path);
+  const pdfs = files.filter((file) => /\.pdf$/i.test(file.path));
+  const pairedPdf =
+    pdfs.find((file) => file.path === path.replace(/\.tex$/i, '.pdf'))?.path ||
+    pdfs.find((file) => file.path === 'paper/main.pdf')?.path ||
+    pdfs.find((file) => file.path.startsWith(path.slice(0, path.lastIndexOf('/') + 1)))?.path;
+  const selectedPdf = pdfPath || pairedPdf || '';
+  const pdf = files.find((file) => file.path === selectedPdf);
+  const source = files.find((file) => file.path === path);
+  const stalePdf = savedSource || (pdf && source && source.modified > pdf.modified);
+
   const [draft, setDraft] = useState('');
   const [baseHash, setBaseHash] = useState('');
   useEffect(() => {
     setMode('预览');
+    setPdfPath('');
+    setSavedSource(false);
     setDraft('');
     setBaseHash('');
   }, [path, projectId]);
@@ -43,7 +61,9 @@ export function Artifact({
       client.invalidateQueries({ queryKey: ['project', projectId] });
       setBaseHash(data.sha256 || '');
       message.success('文件已保存');
-      setMode('预览');
+      if (isTex) setSavedSource(true);
+      else setMode('预览');
+      client.invalidateQueries({ queryKey: ['files', projectId] });
     },
     onError: (error: Error) => message.error(error.message),
   });
@@ -90,13 +110,16 @@ export function Artifact({
       </div>
     );
   return (
-    <div className="artifact-panel">
+    <div className={`artifact-panel ${expanded ? 'artifact-expanded' : ''}`}>
       <div className="artifact-toolbar">
         <span className="artifact-filename">
           <FileTextOutlined />
           {path}
         </span>
-        <Space>
+        <Space wrap>
+          <Button size="small" onClick={() => setExpanded(!expanded)}>
+            {expanded ? '退出全屏' : '全屏查看'}
+          </Button>
           {file.data?.editable && !running && (
             <Segmented
               size="small"
@@ -151,6 +174,55 @@ export function Artifact({
           description={(file.error as Error).message}
           action={<Button onClick={() => file.refetch()}>重试</Button>}
         />
+      ) : isTex ? (
+        <>
+          <Alert
+            type="info"
+            showIcon
+            message="LaTeX 论文工作区"
+            description="左侧编辑源码，右侧对照已有 PDF。保存只更新源码；重新生成 PDF 请在继续研究中选择“编译交付”节点。"
+          />
+          {(dirty || stalePdf) && (
+            <Alert
+              type="warning"
+              banner
+              message="源码已修改，右侧 PDF 可能尚未更新，需重新编译后核对。"
+            />
+          )}
+          <div className="latex-workspace">
+            <section className="latex-source">
+              <div className="pane-heading">LaTeX 源码 · {mode === '编辑' ? '编辑中' : '只读'}</div>
+              {mode === '编辑' ? (
+                <Suspense fallback={<Spin className="editor-loading" />}>
+                  <Editor value={draft} path={path} onChange={setDraft} />
+                </Suspense>
+              ) : (
+                <pre className="source-preview">{file.data?.content || ''}</pre>
+              )}
+            </section>
+            <section className="latex-pdf">
+              <div className="pane-heading">
+                PDF 预览{' '}
+                <Select
+                  aria-label="选择论文 PDF"
+                  placeholder="选择已有 PDF"
+                  value={selectedPdf || undefined}
+                  onChange={setPdfPath}
+                  options={pdfs.map((file) => ({ value: file.path, label: file.path }))}
+                />
+              </div>
+              {selectedPdf ? (
+                <iframe
+                  className="pdf-preview"
+                  title="论文 PDF 对照预览"
+                  src={`${api.download(projectId, selectedPdf)}&v=${pdf?.modified || 0}`}
+                />
+              ) : (
+                <Empty description="尚无已编译 PDF，完成编译交付后可在这里对照查看" />
+              )}
+            </section>
+          </div>
+        </>
       ) : mode === '编辑' ? (
         <Suspense fallback={<Spin className="editor-loading" />}>
           <Editor value={draft} path={path} onChange={setDraft} />
@@ -160,7 +232,8 @@ export function Artifact({
           <iframe className="pdf-preview" title={path} src={api.download(projectId, path)} />
         ) : /\.(png|jpe?g|webp)$/i.test(path) ? (
           <div className="image-preview">
-            <img alt={path} src={api.download(projectId, path)} />
+            <Image alt={path} src={api.download(projectId, path)} />
+            <p className="muted">点击图片可放大、缩小、旋转和查看原图</p>
           </div>
         ) : (
           <Empty description="此文件可下载后查看" />
@@ -172,9 +245,14 @@ export function Artifact({
             rehypePlugins={[rehypeKatex]}
             components={{
               a: (props) => <a {...props} target="_blank" rel="noopener noreferrer" />,
-              img: ({ alt }) => (
-                <span className="muted">[图片：{alt || '请在项目文件中查看'}]</span>
-              ),
+              img: ({ alt, src }) => {
+                const image = resolveImage(path, src, files);
+                return image ? (
+                  <Image alt={alt || image} src={api.download(projectId, image)} />
+                ) : (
+                  <span className="muted">[图片：{alt || '请在图片画廊中查看'}]</span>
+                );
+              },
             }}
           >
             {file.data?.content || ''}
@@ -185,4 +263,15 @@ export function Artifact({
       )}
     </div>
   );
+}
+
+function resolveImage(report: string, src: string | undefined, files: ProjectFile[]) {
+  if (!src || /^(?:[a-z]+:|\/\/)/i.test(src)) return undefined;
+  try {
+    const url = new URL(src, `https://project.invalid/${report}`);
+    const path = decodeURIComponent(url.pathname.slice(1));
+    return files.find((file) => file.path === path && /\.(png|jpe?g|webp)$/i.test(path))?.path;
+  } catch {
+    return undefined;
+  }
 }
