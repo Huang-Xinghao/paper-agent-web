@@ -1367,3 +1367,23 @@ h1 {
     max-width: 260px;
   }
 }
+
+.auth-screen {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #f5f6f3;
+}
+.auth-card {
+  width: min(100%, 400px);
+}
+.auth-card .ant-btn {
+  margin-top: 16px;
+}
+.logout-button {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 100;
+}

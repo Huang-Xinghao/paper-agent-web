@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App as AntApp, ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { App } from './app/App';
+import { AuthGate } from './features/auth/AuthGate';
 import 'antd/dist/reset.css';
 import 'katex/dist/katex.min.css';
 import './app/styles.css';
@@ -32,7 +33,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         }}
       >
         <AntApp>
-          <RouterProvider router={router} />
+          <AuthGate>
+            <RouterProvider router={router} />
+          </AuthGate>
         </AntApp>
       </ConfigProvider>
     </QueryClientProvider>

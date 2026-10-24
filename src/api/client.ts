@@ -29,6 +29,9 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
     headers: { 'Content-Type': 'application/json', ...init?.headers },
   });
   if (!response.ok) {
+    if (response.status === 401 && path !== '/auth/login') {
+      window.dispatchEvent(new Event('session-expired'));
+    }
     let detail = `请求失败 (${response.status})`;
     try {
       const data = await response.json();

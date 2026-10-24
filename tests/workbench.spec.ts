@@ -97,3 +97,35 @@ test('connection errors provide a retry action', async ({ page }) => {
   await expect(page.getByText('服务暂不可用')).toBeVisible();
   await expect(page.getByRole('button', { name: /重\s*试/ })).toBeVisible();
 });
+
+test('login gates project data and logout returns to login', async ({ page }) => {
+  let signedIn = false;
+  await page.route('**/api/auth/session', (route) =>
+    route.fulfill({ json: { enabled: true, authenticated: signedIn } }),
+  );
+  await page.route('**/api/auth/login', async (route) => {
+    const body = route.request().postDataJSON();
+    signedIn = body.username === 'admin' && body.password === 'correct-password';
+    await route.fulfill({
+      status: signedIn ? 200 : 401,
+      json: signedIn ? { authenticated: true } : { detail: '用户名或密码错误' },
+    });
+  });
+  await page.route('**/api/auth/logout', async (route) => {
+    signedIn = false;
+    await route.fulfill({ json: { authenticated: false } });
+  });
+  await page.goto('/');
+  await expect(page.getByText('登录你的研究空间')).toBeVisible();
+  await expect(page.locator('a.project-card')).toHaveCount(0);
+  await page.getByLabel('用户名').fill('admin');
+  await page.getByLabel('密码', { exact: true }).fill('wrong');
+  await page.getByRole('button', { name: /^登\s*录$/ }).click();
+  await expect(page.getByText('用户名或密码错误')).toBeVisible();
+  await page.getByLabel('密码', { exact: true }).fill('correct-password');
+  await page.getByRole('button', { name: /^登\s*录$/ }).click();
+  await expect(page.getByRole('heading', { name: 'battery-study' })).toBeVisible();
+  await page.getByRole('button', { name: '退出登录' }).click();
+  await expect(page.getByText('登录你的研究空间')).toBeVisible();
+  await expect(page.locator('a.project-card')).toHaveCount(0);
+});

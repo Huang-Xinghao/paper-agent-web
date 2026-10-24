@@ -74,3 +74,22 @@ Web 运行采用全局单项目并发策略，项目内并发交给已有实验�
 实验页目前展示任务定义，完成状态仍应结合 tracker、日志和回执确认。Wiki 图谱、多用户、跨项目 GPU 调度、配置编辑和指标对比为后续扩展。
 
 后端管理数据默认位于 `../paper-agent/.paper-agent/web/`。备份时一并保存该目录和研究项目文件；这部分数据不是前端构建产物。
+
+## 当前公网部署
+
+- 前端：`https://www.xora.top`（Vercel，框架 Vite，Node.js 22）。
+- `/api/*` 通过 Vercel 外部 rewrite 转发到 `https://api.xora.top/api/*`，浏览器保持同源请求。
+- 后端：Cloudflare Tunnel → `127.0.0.1:8000`；隧道重写 Host 为 `localhost`。
+- 单用户登录：scrypt 密码摘要、12 小时服务端会话、HttpOnly/Secure/SameSite Cookie、登录限速、Origin 校验。下载、日志、事件流及 API 文档同样受保护。
+- 配置和凭据：`~/.config/paper-agent/`；初始登录信息位于该目录下的 `login.txt`，仅所有者可读。不要提交或发送 Tunnel 凭据。
+- 服务：`paper-agent-api.service`、`paper-agent-tunnel.service`，均为用户 systemd 服务；已启用 linger。
+
+```bash
+systemctl --user status paper-agent-api paper-agent-tunnel
+journalctl --user -u paper-agent-api -u paper-agent-tunnel -n 100
+systemctl --user restart paper-agent-api
+```
+
+网络连通检查使用 `/api/auth/session`；未登录请求 `/api/health` 应返回 401。API 重启会保留研究进程及已落盘的登录会话。Tunnel 重启不会终止研究进程，事件连接会重连。修改密码摘要后应清空管理数据库中的 `web_sessions` 以撤销旧会话。
+
+Vercel 项目目前通过 CLI 部署，GitHub 集成尚未获得新私有仓库权限。需要自动部署时，在 GitHub 为 Vercel App 授权 `Huang-Xinghao/paper-agent-web`，再连接仓库。不要从携带不被 Vercel 识别的 Git 作者信息的目录直接部署；可以将源码复制到不含 `.git` 和任何 `.env*` 的临时目录，复制 `.vercel/project.json` 后执行 `vercel deploy --prod`。
