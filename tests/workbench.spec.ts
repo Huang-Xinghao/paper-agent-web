@@ -178,6 +178,7 @@ test('LaTeX source and PDF appear together and images open in a gallery', async 
 for (const viewport of [
   { width: 1512, height: 900 },
   { width: 390, height: 844 },
+  { width: 360, height: 640 },
 ]) {
   test(`file contents scroll without moving controls at ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport);
@@ -195,6 +196,32 @@ for (const viewport of [
         },
       });
     });
+    if (viewport.height === 640) {
+      await page.route('**/api/projects/*/files', async (route) => {
+        const response = await route.fetch();
+        const data = await response.json();
+        await route.fulfill({
+          response,
+          json: {
+            ...data,
+            files: data.files.map((file: { path: string; modified: number }) =>
+              file.path.endsWith('.tex') ? { ...file, modified: Date.now() / 1000 + 3600 } : file,
+            ),
+          },
+        });
+      });
+      await page.route(/\/api\/projects\/[^/?]+$/, async (route) => {
+        const response = await route.fetch();
+        const data = await response.json();
+        await route.fulfill({
+          response,
+          json: {
+            ...data,
+            state: { ...data.state, error: '连接中断，请查看日志并重试。'.repeat(40) },
+          },
+        });
+      });
+    }
     await openFixture(page);
     const content = page.locator('.artifact-content');
     const toolbar = page.locator('.artifact-toolbar');
@@ -224,6 +251,7 @@ for (const viewport of [
     if (viewport.width < 700) {
       await page.locator('.latex-mobile-switch').getByText('PDF 预览', { exact: true }).click();
       await expect(page.locator('.latex-pdf iframe')).toBeVisible();
+      expect((await page.locator('.latex-pdf iframe').boundingBox())!.height).toBeGreaterThan(50);
       await expect(source).toBeHidden();
     }
     await page.getByRole('button', { name: /运行动态/ }).click();

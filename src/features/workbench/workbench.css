@@ -556,3 +556,51 @@ body:has(.workbench-shell) .logout-button {
     display: none;
   }
 }
+@media (max-width: 700px) {
+  .workspace-panel-header,
+  .artifact-filename,
+  .is-latex > .ant-alert-info {
+    display: none;
+  }
+  .artifact-toolbar {
+    flex-wrap: nowrap;
+  }
+  .workbench-page > .run-alert {
+    max-height: 54px;
+    padding: 6px 10px;
+  }
+  .workbench-page > .run-alert .ant-alert-message {
+    font-size: 11px;
+    margin-bottom: 0;
+  }
+  .workbench-page > .run-alert .ant-alert-description {
+    font-size: 10px;
+  }
+}
+@media (max-width: 700px) {
+  .workbench-shell > .topbar > span {
+    visibility: hidden;
+  }
+}
+@media (max-width: 700px) and (max-height: 740px) {
+  /* On short screens the primary action retains the review/mode entry. */
+  .collaboration-bar,
+  .workbench-heading .back-link {
+    display: none;
+  }
+  .workbench-shell > .topbar {
+    height: 36px;
+  }
+  .workbench-page > .run-alert {
+    max-height: 38px;
+  }
+  .is-latex > .ant-alert-warning {
+    padding: 4px 10px;
+  }
+  .is-latex > .ant-alert-warning .ant-alert-message {
+    font-size: 10px;
+  }
+  body:has(.workbench-shell) .logout-button {
+    top: 2px;
+  }
+}
