@@ -1,0 +1,28 @@
+.artifact-toolbar > .artifact-actions,
+.research-layout .artifact-toolbar > .artifact-actions {
+  flex-shrink: 1;
+  min-width: 0;
+  justify-content: flex-end;
+}
+.artifact-panel > .artifact-edit-notice {
+  flex-shrink: 0;
+  max-height: 100px;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.artifact-edit-notice .ant-alert-message {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.artifact-edit-notice .ant-alert-action {
+  margin-left: 8px;
+}
+@media (max-width: 700px) {
+  .artifact-panel > .artifact-edit-notice {
+    max-height: 74px;
+    padding: 5px 10px;
+  }
+  .artifact-edit-notice .ant-alert-message {
+    font-size: 11px;
+  }
+}

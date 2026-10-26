@@ -7,7 +7,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
-import { api, type ProjectFile } from '../../api/client';
+import { api, ApiError, type ProjectFile } from '../../api/client';
+import './artifact.css';
 const Editor = lazy(() => import('./Editor'));
 export function Artifact({
   projectId,
@@ -24,13 +25,16 @@ export function Artifact({
 }) {
   const { message, modal } = App.useApp();
   const client = useQueryClient();
+  const [mode, setMode] = useState('预览');
+  const [baseContent, setBaseContent] = useState('');
+  const [saveError, setSaveError] = useState('');
   const file = useQuery({
     queryKey: ['file', projectId, path],
     queryFn: () => api.file(projectId, path),
     enabled: !!path,
-    refetchInterval: running ? 6000 : false,
+    refetchInterval: running && mode === '预览' ? 6000 : false,
+    refetchOnWindowFocus: mode === '预览',
   });
-  const [mode, setMode] = useState('预览');
   const [expanded, setExpanded] = useState(false);
   const [pdfPath, setPdfPath] = useState('');
   const [latexPane, setLatexPane] = useState('source');
@@ -54,21 +58,35 @@ export function Artifact({
     setSavedSource(false);
     setDraft('');
     setBaseHash('');
+    setBaseContent('');
+    setSaveError('');
   }, [path, projectId]);
   const save = useMutation({
-    mutationFn: () => api.save(projectId, path, draft, baseHash),
+    mutationFn: () => {
+      if (running) throw new Error('任务仍在运行，请等待阶段审阅或停止运行后保存。');
+      return api.save(projectId, path, draft, baseHash);
+    },
     onSuccess: (data) => {
       client.setQueryData(['file', projectId, path], data);
       client.invalidateQueries({ queryKey: ['project', projectId] });
       setBaseHash(data.sha256 || '');
+      setBaseContent(data.content || '');
+      setSaveError('');
       message.success('文件已保存');
       if (isTex) setSavedSource(true);
       else setMode('预览');
       client.invalidateQueries({ queryKey: ['files', projectId] });
     },
-    onError: (error: Error) => message.error(error.message),
+    onError: (error: Error) => {
+      setSaveError(
+        error instanceof ApiError && error.status === 409
+          ? `${error.message}。草稿已保留；可先下载草稿，再重新加载最新文件进行核对。`
+          : error.message,
+      );
+      message.error(error.message);
+    },
   });
-  const dirty = mode === '编辑' && draft !== file.data?.content;
+  const dirty = mode === '编辑' && draft !== baseContent;
   const blocker = useBlocker(dirty);
   useEffect(() => {
     if (blocker.state !== 'blocked') return;
@@ -96,6 +114,8 @@ export function Artifact({
     }
     if (next === '编辑') {
       setDraft(file.data?.content || '');
+      setBaseContent(file.data?.content || '');
+      setSaveError('');
       setBaseHash(file.data?.sha256 || '');
     }
     setMode(next);
@@ -117,11 +137,11 @@ export function Artifact({
           <FileTextOutlined />
           {path.split('/').pop()}
         </span>
-        <Space wrap>
+        <Space wrap className="artifact-actions">
           <Button size="small" onClick={() => setExpanded(!expanded)}>
             {expanded ? '退出全屏' : '全屏查看'}
           </Button>
-          {file.data?.editable && !running && (
+          {file.data?.editable && (
             <Segmented
               size="small"
               value={mode}
@@ -145,9 +165,27 @@ export function Artifact({
               type="primary"
               icon={<SaveOutlined />}
               loading={save.isPending}
+              disabled={running || !dirty}
               onClick={() => save.mutate()}
             >
               保存
+            </Button>
+          )}
+          {mode === '编辑' && (
+            <Button
+              size="small"
+              onClick={() => {
+                const url = URL.createObjectURL(
+                  new Blob([draft], { type: 'text/plain;charset=utf-8' }),
+                );
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `draft-${path.split('/').pop()}`;
+                link.click();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+              }}
+            >
+              下载草稿
             </Button>
           )}
           <Button
@@ -160,6 +198,43 @@ export function Artifact({
           />
         </Space>
       </div>
+      {file.data?.editable && running && (
+        <Alert
+          className="artifact-edit-notice"
+          type="info"
+          banner
+          message="运行中可编辑草稿；等待阶段审阅或停止运行后再保存，避免与 Agent 的修改冲突。"
+        />
+      )}
+      {saveError && (
+        <Alert
+          className="artifact-edit-notice"
+          type="error"
+          banner
+          message={saveError}
+          action={
+            <Button
+              size="small"
+              onClick={() =>
+                modal.confirm({
+                  title: '重新加载文件并放弃当前草稿？',
+                  content: '如需保留修改，请先下载草稿。',
+                  onOk: async () => {
+                    const result = await file.refetch();
+                    if (!result.data || result.isError) throw new Error('重新加载失败，草稿已保留');
+                    setDraft(result.data.content || '');
+                    setBaseContent(result.data.content || '');
+                    setBaseHash(result.data.sha256 || '');
+                    setSaveError('');
+                  },
+                })
+              }
+            >
+              重新加载文件
+            </Button>
+          }
+        />
+      )}
       {dirty && (
         <Alert type="warning" banner message="有未保存的修改，请在切换文件或页面前保存。" />
       )}
