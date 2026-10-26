@@ -85,3 +85,18 @@ test('concurrent file changes retain the draft and require explicit reload', asy
   await expect(editor).not.toContainText('必须保留的草稿。');
   await expect(page.getByRole('button', { name: /保\s*存/, exact: true })).toBeDisabled();
 });
+
+test('failed editor chunk falls back to an editable draft without losing the workspace', async ({
+  page,
+}) => {
+  await page.route(/\/assets\/Editor-[^/]+\.js$/, (route) => route.abort());
+  await openReport(page);
+  await page.getByText('编辑', { exact: true }).click();
+  const editor = page.getByRole('textbox', { name: '文件文本编辑器' });
+  await expect(editor).toBeVisible();
+  await editor.fill((await editor.inputValue()) + '\n\n备用编辑器的修改。');
+  await page.getByRole('button', { name: /保\s*存/, exact: true }).click();
+  await expect(page.getByText('备用编辑器的修改。', { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByText('备用编辑器的修改。', { exact: true })).toBeVisible();
+});

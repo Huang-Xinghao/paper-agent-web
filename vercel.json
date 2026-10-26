@@ -10,8 +10,23 @@
       "destination": "https://api.xora.top/api/:path*"
     },
     {
-      "source": "/((?!api(?:/|$)).*)",
+      "source": "/((?!api(?:/|$)|assets(?:/|$)).*)",
       "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/((?!assets(?:/|$)|api(?:/|$)).*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, max-age=0, must-revalidate"
+        },
+        {
+          "key": "Cloudflare-CDN-Cache-Control",
+          "value": "no-store"
+        }
+      ]
     }
   ]
 }

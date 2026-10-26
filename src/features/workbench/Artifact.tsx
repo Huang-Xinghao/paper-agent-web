@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useBlocker } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Empty, Image, Segmented, Select, Skeleton, Space, Spin } from 'antd';
@@ -9,7 +9,7 @@ import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { api, ApiError, type ProjectFile } from '../../api/client';
 import './artifact.css';
-const Editor = lazy(() => import('./Editor'));
+import Editor from './SafeEditor';
 export function Artifact({
   projectId,
   path,
